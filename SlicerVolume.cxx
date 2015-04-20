@@ -57,6 +57,7 @@ int main (int argc, char* argv[])
   property->SetColor(ctf.GetPointer());
   property->SetScalarOpacity(pf.GetPointer());
   property->SetGradientOpacity(gf.GetPointer());
+  property->ShadeOn();
   volume->SetProperty(property.GetPointer());
 
   vtkNew<vtkRenderWindow> renWin;
