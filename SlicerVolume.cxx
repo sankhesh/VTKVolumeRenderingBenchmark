@@ -4,14 +4,17 @@
 // VTK includes
 #include <vtkCamera.h>
 #include <vtkColorTransferFunction.h>
-#include <vtkGPUVolumeRayCastMapper.h>
+#include <vtkDataArray.h>
 #include <vtkGenericDataObjectReader.h>
+#include <vtkGPUVolumeRayCastMapper.h>
+#include <vtkImageData.h>
 #include <vtkInteractorStyleTrackballCamera.h>
 #include <vtkNew.h>
 #include <vtkPiecewiseFunction.h>
+#include <vtkPointData.h>
+#include <vtkRenderer.h>
 #include <vtkRenderWindow.h>
 #include <vtkRenderWindowInteractor.h>
-#include <vtkRenderer.h>
 #include <vtkTimerLog.h>
 #include <vtkVolume.h>
 #include <vtkVolume.h>
@@ -21,13 +24,43 @@ int main (int argc, char* argv[])
 {
   if (argc < 2)
     {
-    std::cerr << "Usage: " << argv[0] << " <input VTK file> [-I]" << std::endl;
+    std::cerr << "Usage: " << argv[0] << " <input VTK file> [--shade] [-I]" << std::endl;
     return EXIT_FAILURE;
+    }
+
+  bool shade = false;
+  bool interactive = false;
+  for (int i = 2; i < argc; ++i)
+    {
+    if (strcmp(argv[i], "--shade") == 0)
+      {
+      shade = true;
+      }
+    else if (strcmp(argv[i], "-I") == 0)
+      {
+      interactive = true;
+      }
     }
 
   vtkNew<vtkGenericDataObjectReader> reader;
   reader->SetFileName(argv[1]);
   reader->Update();
+
+  vtkImageData* im = vtkImageData::SafeDownCast(reader->GetOutput());
+  if (!im)
+    {
+    std::cerr << "Input file " << argv[1] <<
+      " does not contain a dataset of type vtkImageData" << std::endl;
+    return EXIT_FAILURE;
+    }
+
+  std::cout << "Input dataset : " << argv[1] << std::endl;
+  std::cout << "Dimensions : (" << im->GetDimensions()[0] << ", " <<
+    im->GetDimensions()[1] << ", " << im->GetDimensions()[2] << ")" << std::endl;
+  std::cout << "Data Type : " <<
+    im->GetPointData()->GetScalars()->GetDataTypeAsString() << std::endl;
+  std::cout << std::endl << "Shading : " << (shade ? "ON" : "OFF") <<
+    std::endl << std::endl;
 
   vtkNew<vtkGPUVolumeRayCastMapper> mapper;
   mapper->SetInputConnection(reader->GetOutputPort());
@@ -57,7 +90,7 @@ int main (int argc, char* argv[])
   property->SetColor(ctf.GetPointer());
   property->SetScalarOpacity(pf.GetPointer());
   property->SetGradientOpacity(gf.GetPointer());
-  property->ShadeOn();
+  property->SetShade(shade);
   volume->SetProperty(property.GetPointer());
 
   vtkNew<vtkRenderWindow> renWin;
@@ -94,8 +127,9 @@ int main (int argc, char* argv[])
     " sec." << std::endl;
   std::cout << "Frame Rate: " << frameRate << " fps" << std::endl;
 
-  if (argc > 2 && strcmp(argv[2], "-I") == 0)
+  if (interactive)
     {
+    std::cout << std::endl << "Entering interactive mode..." << std::endl;
     iren->Initialize();
     iren->Start();
     }
