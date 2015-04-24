@@ -66,7 +66,7 @@ int main (int, char**)
   planeActor->SetMapper(planeMapper.GetPointer());
 
   vtkNew<vtkRenderer> renderer;
-  renderer->SetBackground(0.2, 0.8, 0.8);
+  renderer->SetBackground(0.3, 0.35, 0.45);
   renderWindow->AddRenderer(renderer.GetPointer());
 
   renderer->AddActor(planeActor.GetPointer());
