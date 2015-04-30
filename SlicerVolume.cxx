@@ -5,6 +5,7 @@
 #include <vtkCamera.h>
 #include <vtkColorTransferFunction.h>
 #include <vtkDataArray.h>
+#include <vtkFixedPointVolumeRayCastMapper.h>
 #include <vtkGenericDataObjectReader.h>
 #include <vtkGPUVolumeRayCastMapper.h>
 #include <vtkImageData.h>
@@ -24,12 +25,13 @@ int main (int argc, char* argv[])
 {
   if (argc < 2)
     {
-    std::cerr << "Usage: " << argv[0] << " <input VTK file> [--shade] [-I]" << std::endl;
+    std::cerr << "Usage: " << argv[0] << " <input VTK file> [--cpu] [--shade] [-I]" << std::endl;
     return EXIT_FAILURE;
     }
 
   bool shade = false;
   bool interactive = false;
+  bool cpu = false;
   for (int i = 2; i < argc; ++i)
     {
     if (strcmp(argv[i], "--shade") == 0)
@@ -39,6 +41,10 @@ int main (int argc, char* argv[])
     else if (strcmp(argv[i], "-I") == 0)
       {
       interactive = true;
+      }
+    else if (strcmp(argv[i], "--cpu") == 0)
+      {
+      cpu = true;
       }
     }
 
@@ -59,14 +65,25 @@ int main (int argc, char* argv[])
     im->GetDimensions()[1] << ", " << im->GetDimensions()[2] << ")" << std::endl;
   std::cout << "Data Type : " <<
     im->GetPointData()->GetScalars()->GetDataTypeAsString() << std::endl;
-  std::cout << std::endl << "Shading : " << (shade ? "ON" : "OFF") <<
-    std::endl << std::endl;
+  std::cout << std::endl <<  "Mapper: " << (cpu ? "CPU" : "GPU") << std::endl;
+  std::cout << "Shading : " << (shade ? "ON" : "OFF") << std::endl;
 
-  vtkNew<vtkGPUVolumeRayCastMapper> mapper;
+  vtkNew<vtkGPUVolumeRayCastMapper> gpumapper;
+  vtkNew<vtkFixedPointVolumeRayCastMapper> cpumapper;
+  vtkVolumeMapper* mapper;
+  if (cpu)
+    {
+    mapper = cpumapper.GetPointer();
+    }
+  else
+    {
+    mapper = gpumapper.GetPointer();
+    }
+
   mapper->SetInputConnection(reader->GetOutputPort());
 
   vtkNew<vtkVolume> volume;
-  volume->SetMapper(mapper.GetPointer());
+  volume->SetMapper(mapper);
 
   vtkNew<vtkColorTransferFunction> ctf;
   ctf->AddRGBPoint(-3024, 0, 0, 0);
@@ -122,10 +139,12 @@ int main (int argc, char* argv[])
     - startTime - firstFrameTime)/frameCount;
   double frameRate = 1.0 / subsequentFrameTime;
 
+  std::cout << std::endl;
   std::cout << "First Frame Time: " << firstFrameTime << " sec." << std::endl;
   std::cout << "Subsequent Frame Time: " << subsequentFrameTime <<
     " sec." << std::endl;
   std::cout << "Frame Rate: " << frameRate << " fps" << std::endl;
+  std::cout << std::endl;
 
   if (interactive)
     {
