@@ -112,6 +112,7 @@ int main (int argc, char* argv[])
 
   vtkNew<vtkRenderWindow> renWin;
   renWin->SetSize(400,400);
+  //renWin->SetDesiredUpdateRate(10);
   vtkNew<vtkRenderWindowInteractor> iren;
   iren->SetRenderWindow(renWin.GetPointer());
   vtkNew<vtkInteractorStyleTrackballCamera> style;
@@ -126,10 +127,12 @@ int main (int argc, char* argv[])
   double startTime = vtkTimerLog::GetUniversalTime();
   renWin->Render();
   double firstFrameTime = vtkTimerLog::GetUniversalTime() - startTime;
-  int frameCount = 80;
+  int frameCount = 10;
   for (int i = 0; i < frameCount; i++)
     {
     renWin->Render();
+//    std::cout  << "Time to draw: " << mapper->GetTimeToDraw() <<
+//      " " << volume->GetAllocatedRenderTime()  << std::endl;
     ren->GetActiveCamera()->Azimuth(1);
     ren->GetActiveCamera()->Elevation(1);
     ren->ResetCameraClippingRange();
@@ -145,6 +148,7 @@ int main (int argc, char* argv[])
     " sec." << std::endl;
   std::cout << "Frame Rate: " << frameRate << " fps" << std::endl;
   std::cout << std::endl;
+  std::cout << "Desired Update Rate: " << renWin->GetDesiredUpdateRate() << std::endl;
 
   if (interactive)
     {
