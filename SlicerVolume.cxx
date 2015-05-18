@@ -20,6 +20,10 @@
 #include <vtkVolume.h>
 #include <vtkVolume.h>
 #include <vtkVolumeProperty.h>
+#include <vtkWindowToImageFilter.h>
+#include <vtkPNGWriter.h>
+
+#include <sstream>
 
 int main (int argc, char* argv[])
 {
@@ -112,7 +116,7 @@ int main (int argc, char* argv[])
 
   vtkNew<vtkRenderWindow> renWin;
   renWin->SetSize(400,400);
-  //renWin->SetDesiredUpdateRate(10);
+  renWin->SetDesiredUpdateRate(50);
   vtkNew<vtkRenderWindowInteractor> iren;
   iren->SetRenderWindow(renWin.GetPointer());
   vtkNew<vtkInteractorStyleTrackballCamera> style;
@@ -121,18 +125,43 @@ int main (int argc, char* argv[])
   vtkNew<vtkRenderer> ren;
   renWin->AddRenderer(ren.GetPointer());
 
+  ren->SetBackground(0.3, 0.3, 0.4);
   ren->AddVolume(volume.GetPointer());
   ren->ResetCamera();
 
   double startTime = vtkTimerLog::GetUniversalTime();
   renWin->Render();
   double firstFrameTime = vtkTimerLog::GetUniversalTime() - startTime;
-  int frameCount = 10;
+  int frameCount = 80;
+  bool imageCaptured = false;
   for (int i = 0; i < frameCount; i++)
     {
     renWin->Render();
-//    std::cout  << "Time to draw: " << mapper->GetTimeToDraw() <<
-//      " " << volume->GetAllocatedRenderTime()  << std::endl;
+    if (!imageCaptured)
+      {
+      double diffToTest = volume->GetAllocatedRenderTime() -
+        mapper->GetTimeToDraw();
+      if (diffToTest > 0.0 && diffToTest < 1e-3)
+        {
+        std::cout  << "Time to draw: " << mapper->GetTimeToDraw() <<
+          " " << volume->GetAllocatedRenderTime()  << std::endl;
+        vtkNew<vtkWindowToImageFilter> wti;
+        wti->SetInput(renWin.GetPointer());
+        wti->SetInputBufferTypeToRGBA();
+        wti->ReadFrontBufferOff();
+        wti->Update();
+
+        vtkNew<vtkPNGWriter> writer;
+        writer->SetInputConnection(wti->GetOutputPort());
+        std::ostringstream oss;
+        oss << "Screenshot_" << (cpu ? "CPU" : "GPU")
+          << "_" << mapper->GetTimeToDraw() << ".png";
+        writer->SetFileName(oss.str().c_str());
+        writer->Write();
+        std::cout << "Writing file " << oss.str() << std::endl;
+        imageCaptured = true;
+        }
+      }
     ren->GetActiveCamera()->Azimuth(1);
     ren->GetActiveCamera()->Elevation(1);
     ren->ResetCameraClippingRange();
