@@ -128,55 +128,53 @@ int main (int argc, char* argv[])
   ren->SetBackground(0.3, 0.3, 0.4);
   ren->AddVolume(volume.GetPointer());
   ren->ResetCamera();
+  double viewUp[3], position[3], focalpoint[3];
+  ren->GetActiveCamera()->GetViewUp(viewUp);
+  ren->GetActiveCamera()->GetPosition(position);
+  ren->GetActiveCamera()->GetFocalPoint(focalpoint);
 
+  double numSamples = 11.0;
+  cpumapper->AutoAdjustSampleDistancesOff();
+  gpumapper->AutoAdjustSampleDistancesOff();
+  std::cout << "AutoAdjustSampleDistances: OFF" << std::endl;
+  for (int n = 1; n < numSamples; ++n)
+    {
+    if (cpu)
+      {
+      cpumapper->SetSampleDistance(0.1 * n);
+      }
+    else
+      {
+      gpumapper->SetSampleDistance(0.1 * n);
+      }
   double startTime = vtkTimerLog::GetUniversalTime();
   renWin->Render();
   double firstFrameTime = vtkTimerLog::GetUniversalTime() - startTime;
   int frameCount = 80;
-  bool imageCaptured = false;
-  for (int i = 0; i < frameCount; i++)
-    {
-    renWin->Render();
-    if (!imageCaptured)
+    for (int i = 0; i < frameCount; i++)
       {
-      double diffToTest = volume->GetAllocatedRenderTime() -
-        mapper->GetTimeToDraw();
-      if (diffToTest > 0.0 && diffToTest < 1e-3)
-        {
-        std::cout  << "Time to draw: " << mapper->GetTimeToDraw() <<
-          " " << volume->GetAllocatedRenderTime()  << std::endl;
-        vtkNew<vtkWindowToImageFilter> wti;
-        wti->SetInput(renWin.GetPointer());
-        wti->SetInputBufferTypeToRGBA();
-        wti->ReadFrontBufferOff();
-        wti->Update();
-
-        vtkNew<vtkPNGWriter> writer;
-        writer->SetInputConnection(wti->GetOutputPort());
-        std::ostringstream oss;
-        oss << "Screenshot_" << (cpu ? "CPU" : "GPU")
-          << "_" << mapper->GetTimeToDraw() << ".png";
-        writer->SetFileName(oss.str().c_str());
-        writer->Write();
-        std::cout << "Writing file " << oss.str() << std::endl;
-        imageCaptured = true;
-        }
+      renWin->Render();
+      ren->GetActiveCamera()->Azimuth(1);
+      ren->GetActiveCamera()->Elevation(1);
+      ren->ResetCameraClippingRange();
       }
-    ren->GetActiveCamera()->Azimuth(1);
-    ren->GetActiveCamera()->Elevation(1);
-    ren->ResetCameraClippingRange();
-    }
 
   double subsequentFrameTime = (vtkTimerLog::GetUniversalTime()
     - startTime - firstFrameTime)/frameCount;
   double frameRate = 1.0 / subsequentFrameTime;
 
-  std::cout << std::endl;
-  std::cout << "First Frame Time: " << firstFrameTime << " sec." << std::endl;
-  std::cout << "Subsequent Frame Time: " << subsequentFrameTime <<
-    " sec." << std::endl;
-  std::cout << "Frame Rate: " << frameRate << " fps" << std::endl;
-  std::cout << std::endl;
+  // Reset camera back
+    ren->GetActiveCamera()->SetViewUp(viewUp);
+    ren->GetActiveCamera()->SetPosition(position);
+    ren->GetActiveCamera()->SetFocalPoint(focalpoint);
+
+    std::cout << (0.1 * n) << ", " << frameRate << std::endl;
+  //  std::cout << "First Frame Time: " << firstFrameTime << " sec." << std::endl;
+  //  std::cout << "Subsequent Frame Time: " << subsequentFrameTime <<
+  //    " sec." << std::endl;
+  //  std::cout << "Frame Rate: " << frameRate << " fps" << std::endl;
+  //  std::cout << std::endl;
+    }
   std::cout << "Desired Update Rate: " << renWin->GetDesiredUpdateRate() << std::endl;
 
   if (interactive)
