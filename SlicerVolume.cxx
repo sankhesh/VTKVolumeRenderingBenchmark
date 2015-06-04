@@ -65,6 +65,9 @@ int main (int argc, char* argv[])
     im->GetDimensions()[1] << ", " << im->GetDimensions()[2] << ")" << std::endl;
   std::cout << "Data Type : " <<
     im->GetPointData()->GetScalars()->GetDataTypeAsString() << std::endl;
+  std::cout << "Data Spacing: (" << im->GetSpacing()[0] << ", " <<
+               im->GetSpacing()[1] << ", " <<
+               im->GetSpacing()[2] << ")" << std::endl;
   std::cout << std::endl <<  "Mapper: " << (cpu ? "CPU" : "GPU") << std::endl;
   std::cout << "Shading : " << (shade ? "ON" : "OFF") << std::endl;
 
@@ -108,6 +111,7 @@ int main (int argc, char* argv[])
   property->SetScalarOpacity(pf.GetPointer());
   property->SetGradientOpacity(gf.GetPointer());
   property->SetShade(shade);
+  property->SetInterpolationTypeToLinear();
   volume->SetProperty(property.GetPointer());
 
   vtkNew<vtkRenderWindow> renWin;
